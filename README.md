@@ -1,4 +1,4 @@
-<div align="center"><img srcset="banner.png"></div>
+![Banner](./banner.png)
 
 <br>
 
