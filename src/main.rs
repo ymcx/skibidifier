@@ -14,6 +14,16 @@ struct Data {
     pub key:        String,
 }
 
+#[derive(PartialEq)]
+enum State {
+    DEFAULT,
+    KEYFILE,
+    INPUTFILE,
+    OUTPUTFILE,
+    KEY,
+    INPUT,
+}
+
 fn main() {
     let args: Vec<String> = args().collect();
 
@@ -22,48 +32,74 @@ fn main() {
     }
 
     let mut data = Data::default();
-    let mut skip = false;
+    let mut state = State::DEFAULT;
 
     for i in 1..args.len() {
-        if skip {
-            skip = false;
-            continue;
-        }
         match args[i].as_str() {
-            "-K"|"--keyfile" => {
-                skip = true;
-                data.key = read_file(&args[i+1]);
-            },
-            "-I"|"--inputfile" => {
-                skip = true;
-                data.input = read_file(&args[i+1]);
-            },
-            "-O"|"--outputfile" => {
-                skip = true;
-                data.outputfile = args[i+1].to_string();
-            },
-            "-k"|"--key" => {
-                skip = true;
-                data.key = args[i+1].to_string();
-            },
-            "-i"|"--input" => {
-                skip = true;
-                data.input = args[i+1].to_string();
-            },
-            "-"|"--stdin" => {
-                data.input = read_std();
-            },
-            "-d"|"--decrypt" => {
-                data.decrypting = true;
-            },
-            "-e"|"--encrypt" => {
-                data.encrypting = true;
-            },
-            "-h"|"--help" => {
-                help();
-            },
-            _ => {}
+            "-K"|"--keyfile"    => state = State::KEYFILE,
+            "-I"|"--inputfile"  => state = State::INPUTFILE,
+            "-O"|"--outputfile" => state = State::OUTPUTFILE,
+            "-k"|"--key"        => state = State::KEY,
+            "-i"|"--input"      => state = State::INPUT,
+            "-" |"--stdin"      => data.input = read_std(),
+            "-d"|"--decrypt"    => data.decrypting = true,
+            "-e"|"--encrypt"    => data.encrypting = true,
+            "-h"|"--help"       => help(),
+            arg => {
+                match state {
+                    State::DEFAULT => {
+                        panic!("Unrecognized arguments provided");
+                    },
+                    State::KEYFILE => {
+                        state = State::DEFAULT;
+                        if !data.key.is_empty() {
+                            panic!("Can't set the key more than once");
+                        }
+                        data.key = read_file(&arg);
+                    },
+                    State::INPUTFILE => {
+                        state = State::DEFAULT;
+                        if !data.input.is_empty() {
+                            panic!("Can't set the string to be encrypted/decrypted more than once");
+                        }
+                        data.input = read_file(&arg);
+                    },
+                    State::OUTPUTFILE => {
+                        state = State::DEFAULT;
+                        if !data.outputfile.is_empty() {
+                            panic!("Can't set the output file more than once");
+                        }
+                        data.outputfile = arg.to_string();
+                    },
+                    State::KEY => {
+                        state = State::DEFAULT;
+                        if !data.key.is_empty() {
+                            panic!("Can't set the key more than once");
+                        }
+                        data.key = arg.to_string();
+                    },
+                    State::INPUT => {
+                        state = State::DEFAULT;
+                        if !data.input.is_empty() {
+                            panic!("Can't set the string to be encrypted/decrypted more than once");
+                        }
+                        data.input = arg.to_string();
+                    },
+                }
+            }
         }
+    }
+
+    if state != State::DEFAULT {
+        panic!("An argument wasn't provided for the last flag");
+    }
+
+    if data.encrypting && data.decrypting {
+        panic!("Can't encrypt and decrypt at the same time");
+    }
+    
+    if !data.encrypting && !data.decrypting {
+        panic!("You'll need to specify if you want to encrypt or decrypt");
     }
 
     // Get the encrypted/decrypted message derived using the given key

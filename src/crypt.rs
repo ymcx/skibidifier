@@ -1,5 +1,5 @@
-use std::process::exit;
-
+const ZERO: &str = "skibidi";
+const ONE:  &str = "toilet";
 const DELTA: u32 = 0x9E3779B9;
 
 pub fn crypt(encrypting: bool, key: &str, input: &str) -> String {
@@ -19,16 +19,16 @@ pub fn crypt(encrypting: bool, key: &str, input: &str) -> String {
             .collect();
         let mut bytes = from_binary(&binary);
         decrypt(&mut bytes, &key);
-        from_bytes(&bytes)
+        from_bytes(&bytes).trim().to_string()
     }
 }
 
 fn skibidify(input: &str) -> String {
-    input.replace("0", "skibidi").replace("1", "toilet")
+    input.replace("0", ZERO).replace("1", ONE)
 }
 
 fn unskibidify(input: &str) -> String {
-    input.replace("skibidi", "0").replace("toilet", "1")
+    input.replace(ZERO, "0").replace(ONE, "1")
 }
 
 // TEA, a tiny encryption algorithm
@@ -68,7 +68,7 @@ fn to_binary(bytes: &Vec<u32>) -> Vec<String> {
 fn from_binary(binary: &Vec<String>) -> Vec<u32> {
     let mut bytes: Vec<u32> = Vec::new();
     for i in binary {
-        bytes.push(u32::from_str_radix(i, 2).unwrap());
+        bytes.push(u32::from_str_radix(i, 2).expect("Couldn't convert from binary to bytes"));
     }
     bytes
 }
@@ -89,7 +89,7 @@ fn from_bytes(largebytes: &Vec<u32>) -> String {
     for i in largebytes {
         bytes.extend_from_slice(&i.to_le_bytes());
     }
-    String::from_utf8(bytes).unwrap().trim().to_string()
+    String::from_utf8(bytes).expect("Couldn't convert from bytes to a string")
 }
 
 fn pad(str: &str) -> String {
@@ -101,11 +101,10 @@ fn key_from_str(keystr: &str) -> [u32;4] {
     let mut key: [u32;4] = [0,0,0,0];
     let iter = keystr.split_whitespace();
     if iter.clone().count() != 4 {
-        eprintln!("The key must consist of 4 unsigned 32-bit integers");
-        exit(1);
+        panic!("The key must consist of 4 unsigned 32-bit integers");
     }
     for (i, j) in iter.enumerate() {
-        key[i] = j.parse().unwrap();
+        key[i] = j.parse().expect("Couldn't derive the key from the given string");
     }
     key
 }
