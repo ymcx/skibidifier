@@ -41,9 +41,24 @@ fn main() {
             "-O"|"--outputfile" => state = State::OUTPUTFILE,
             "-k"|"--key"        => state = State::KEY,
             "-i"|"--input"      => state = State::INPUT,
-            "-" |"--stdin"      => data.input = read_std(),
-            "-d"|"--decrypt"    => data.decrypting = true,
-            "-e"|"--encrypt"    => data.encrypting = true,
+            "-" |"--stdin"      => {
+                state = State::DEFAULT;
+                data.input = read_std();
+            },
+            "-d"|"--decrypt"    => {
+                state = State::DEFAULT;
+                if data.decrypting || data.encrypting {
+                    panic!("Can't set the crypting mode more than once");
+                }
+                data.decrypting = true;
+            },
+            "-e"|"--encrypt"    => {
+                state = State::DEFAULT;
+                if data.decrypting || data.encrypting {
+                    panic!("Can't set the crypting mode more than once");
+                }
+                data.encrypting = true;
+            },
             "-h"|"--help"       => help(),
             arg => {
                 match state {
@@ -90,14 +105,14 @@ fn main() {
         }
     }
 
+    if data.input.is_empty() {
+        panic!("Nothing to encrypt/decrypt");
+    }
+
     if state != State::DEFAULT {
         panic!("An argument wasn't provided for the last flag");
     }
 
-    if data.encrypting && data.decrypting {
-        panic!("Can't encrypt and decrypt at the same time");
-    }
-    
     if !data.encrypting && !data.decrypting {
         panic!("You'll need to specify if you want to encrypt or decrypt");
     }
